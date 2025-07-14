@@ -1,193 +1,71 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <title>Inventario de Modulares</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 40px;
-      background: #f2f2f2;
-    }
-    h1 {
-      text-align: center;
-    }
-    form, table, .search-export {
-      max-width: 800px;
-      margin: 20px auto;
-      background: #fff;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    input, textarea, button, select {
-      width: 100%;
-      margin: 10px 0;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-    }
-    table {
-      border-collapse: collapse;
-      width: 100%;
-    }
-    th, td {
-      padding: 10px;
-      text-align: left;
-      border-bottom: 1px solid #ccc;
-    }
-    .actions button {
-      width: auto;
-      margin-right: 5px;
-    }
-    .search-export {
-      display: flex;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    @media (max-width: 600px) {
-      .search-export {
-        flex-direction: column;
-      }
-    }
-  </style>
-</head>
-<body>
-  <h1>Inventario de Modulares</h1>
 
-  <form id="modularForm">
-    <input type="hidden" id="modularIndex">
-    <input type="text" id="nombre" placeholder="Nombre o código del modular" required>
-    <input type="number" id="cantidad" placeholder="Cantidad" required>
-    <input type="text" id="ubicacion" placeholder="Ubicación (ej: habitación, bodega)" required>
-    <input type="text" id="tipo" placeholder="Tipo o categoría (ej: zapatero, estante)" required>
-    <select id="estado">
-      <option value="Nuevo">Nuevo</option>
-      <option value="Usado">Usado</option>
-      <option value="Dañado">Dañado</option>
-    </select>
-    <textarea id="descripcion" placeholder="Descripción (opcional)"></textarea>
-    <button type="submit">Guardar Modular</button>
-  </form>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+  const CLIENT_ID = "44635824268-o6n0gvu9smp2tlsuk23b8n17660r32gj.apps.googleusercontent.com";
+  const CORREO_AUTORIZADO = "tu_correo@gmail.com"; // <-- cambia esto por tu Gmail real si quieres restringir acceso
 
-  <div class="search-export">
-    <input type="text" id="busqueda" placeholder="Buscar por nombre o ubicación...">
-    <button onclick="exportarCSV()">Exportar a CSV</button>
-  </div>
-
-  <table id="modularTable">
-    <thead>
-      <tr>
-        <th>Nombre</th>
-        <th>Cantidad</th>
-        <th>Ubicación</th>
-        <th>Tipo</th>
-        <th>Estado</th>
-        <th>Descripción</th>
-        <th>Acciones</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-
-  <script>
-    const form = document.getElementById('modularForm');
-    const tableBody = document.querySelector('#modularTable tbody');
-    const busqueda = document.getElementById('busqueda');
-
-    let modulares = JSON.parse(localStorage.getItem('modulares')) || [];
-
-    function renderTable(filtro = '') {
-      tableBody.innerHTML = '';
-      modulares.forEach((modular, index) => {
-        if (
-          modular.nombre.toLowerCase().includes(filtro.toLowerCase()) ||
-          modular.ubicacion.toLowerCase().includes(filtro.toLowerCase())
-        ) {
-          const row = document.createElement('tr');
-          row.innerHTML = `
-            <td>${modular.nombre}</td>
-            <td>${modular.cantidad}</td>
-            <td>${modular.ubicacion}</td>
-            <td>${modular.tipo}</td>
-            <td>${modular.estado}</td>
-            <td>${modular.descripcion}</td>
-            <td class="actions">
-              <button onclick="editarModular(${index})">Editar</button>
-              <button onclick="eliminarModular(${index})">Eliminar</button>
-            </td>
-          `;
-          tableBody.appendChild(row);
-        }
-      });
+  function handleCredentialResponse(response) {
+    const data = parseJwt(response.credential);
+    if (!data || !data.email_verified) {
+      alert("Error de autenticación con Google.");
+      return;
     }
 
-    function guardarLocal() {
-      localStorage.setItem('modulares', JSON.stringify(modulares));
+    if (CORREO_AUTORIZADO && data.email !== CORREO_AUTORIZADO) {
+      alert("Acceso restringido solo a usuarios autorizados.");
+      return;
     }
 
-    form.addEventListener('submit', function(e) {
-      e.preventDefault();
-      const nombre = document.getElementById('nombre').value;
-      const cantidad = document.getElementById('cantidad').value;
-      const ubicacion = document.getElementById('ubicacion').value;
-      const tipo = document.getElementById('tipo').value;
-      const estado = document.getElementById('estado').value;
-      const descripcion = document.getElementById('descripcion').value;
-      const index = document.getElementById('modularIndex').value;
+    document.getElementById("loginOverlay").style.display = "none";
+    iniciarTemporizadorInactividad();
+  }
 
-      const nuevoModular = { nombre, cantidad, ubicacion, tipo, estado, descripcion };
+  function parseJwt(token) {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    return JSON.parse(jsonPayload);
+  }
 
-      if (index === '') {
-        modulares.push(nuevoModular);
-      } else {
-        modulares[index] = nuevoModular;
-        document.getElementById('modularIndex').value = '';
-      }
+  window.onload = () => {
+    google.accounts.id.initialize({
+      client_id: CLIENT_ID,
+      callback: handleCredentialResponse
+    });
+    google.accounts.id.renderButton(
+      document.getElementById("g_id_signin"),
+      { theme: "outline", size: "large" }
+    );
+    google.accounts.id.prompt();
+  };
 
-      guardarLocal();
-      renderTable(busqueda.value);
-      form.reset();
+  // Temporizador de inactividad
+  let ultimaActividad = Date.now();
+  const LIMITE_INACTIVIDAD = 5 * 60 * 1000;
+
+  function iniciarTemporizadorInactividad() {
+    ['mousemove', 'keydown', 'click'].forEach(evento => {
+      document.addEventListener(evento, () => ultimaActividad = Date.now());
     });
 
-    function editarModular(index) {
-      const modular = modulares[index];
-      document.getElementById('nombre').value = modular.nombre;
-      document.getElementById('cantidad').value = modular.cantidad;
-      document.getElementById('ubicacion').value = modular.ubicacion;
-      document.getElementById('tipo').value = modular.tipo;
-      document.getElementById('estado').value = modular.estado;
-      document.getElementById('descripcion').value = modular.descripcion;
-      document.getElementById('modularIndex').value = index;
-    }
-
-    function eliminarModular(index) {
-      if (confirm('¿Estás seguro de eliminar este modular?')) {
-        modulares.splice(index, 1);
-        guardarLocal();
-        renderTable(busqueda.value);
+    setInterval(() => {
+      if (Date.now() - ultimaActividad > LIMITE_INACTIVIDAD) {
+        alert("Sesión cerrada por inactividad.");
+        window.location.reload();
       }
-    }
+    }, 60000);
+  }
+</script>
 
-    busqueda.addEventListener('input', () => renderTable(busqueda.value));
+<div id="loginOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);display:flex;justify-content:center;align-items:center;z-index:1000">
+  <div style="background:#fff;padding:30px;border-radius:10px;text-align:center;box-shadow:0 0 15px rgba(0,0,0,0.3)">
+    <h2>Inicia sesión con Google</h2>
+    <div id="g_id_signin"></div>
+  </div>
+</div>
 
-    function exportarCSV() {
-      let csv = 'Nombre,Cantidad,Ubicación,Tipo,Estado,Descripción\n';
-      modulares.forEach(m => {
-        csv += `${m.nombre},${m.cantidad},${m.ubicacion},${m.tipo},${m.estado},"${m.descripcion.replace(/\n/g, ' ')}"\n`;
-      });
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'inventario_modulares.csv';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    }
-
-    renderTable();
-  </script>
-</body>
-</html>
+<script>
+  renderTable();
+</script>
