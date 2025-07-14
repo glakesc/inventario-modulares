@@ -1,75 +1,95 @@
 
-<script src="https://accounts.google.com/gsi/client" async defer></script>
-<script>
-  const CLIENT_ID = "44635824268-o6n0gvu9smp2tlsuk23b8n17660r32gj.apps.googleusercontent.com";
-  const CORREO_AUTORIZADO = "gilmar.lagosc@gmail.com"; // ← reemplázalo por tu correo real
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Inventario Modulares</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+    #loginOverlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.85); display: flex; justify-content: center;
+      align-items: center; z-index: 1000;
+    }
+    #loginBox {
+      background: white; padding: 30px; border-radius: 10px;
+      text-align: center; box-shadow: 0 0 15px rgba(0,0,0,0.3);
+    }
+  </style>
+</head>
+<body>
+  <div id="loginOverlay">
+    <div id="loginBox">
+      <h2>Inicia sesión con Google</h2>
+      <div id="g_id_signin"></div>
+    </div>
+  </div>
 
-  function handleCredentialResponse(response) {
-    const data = parseJwt(response.credential);
-    if (!data || !data.email_verified) {
-      alert("Error de autenticación con Google.");
-      return;
+  <script>
+    const CLIENT_ID = "44635824268-o6n0gvu9smp2tlsuk23b8n17660r32gj.apps.googleusercontent.com";
+
+    function handleCredentialResponse(response) {
+      const data = parseJwt(response.credential);
+      if (!data || !data.email_verified) {
+        alert("Error de autenticación con Google.");
+        return;
+      }
+
+      const CORREO_AUTORIZADO = "gilmar.lagosc@gmail.com"; // ← correo corregido
+
+      console.log("Correo autorizado esperado:", CORREO_AUTORIZADO);
+      console.log("Correo recibido:", data.email);
+
+      if (CORREO_AUTORIZADO && data.email !== CORREO_AUTORIZADO) {
+        alert("Acceso restringido solo a usuarios autorizados.");
+        return;
+      }
+
+      // MOSTRAR CONTENIDO AL VALIDAR
+      document.getElementById("loginOverlay").style.display = "none";
+      iniciarTemporizadorInactividad();
+      renderTable();
     }
 
-    // DEBUG: imprimir correo recibido al hacer login
-    console.log("Correo autorizado esperado:", CORREO_AUTORIZADO);
-    console.log("Correo recibido:", data.email);
+    function parseJwt(token) {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      return JSON.parse(jsonPayload);
+    }
 
-    // Desactiva validación temporalmente para pruebas
-    // if (CORREO_AUTORIZADO && data.email !== CORREO_AUTORIZADO) {
-    //   alert("Acceso restringido solo a usuarios autorizados.");
-    //   return;
-    // }
+    function iniciarTemporizadorInactividad() {
+      let ultimaActividad = Date.now();
+      const LIMITE = 5 * 60 * 1000;
+      ['mousemove', 'keydown', 'click'].forEach(evt => {
+        document.addEventListener(evt, () => ultimaActividad = Date.now());
+      });
+      setInterval(() => {
+        if (Date.now() - ultimaActividad > LIMITE) {
+          alert("Sesión cerrada por inactividad.");
+          window.location.reload();
+        }
+      }, 60000);
+    }
 
-    document.getElementById("loginOverlay").style.display = "none";
-    iniciarTemporizadorInactividad();
-  }
+    function renderTable() {
+      document.body.innerHTML += '<h3>📦 Aquí aparecerá tu inventario cargado...</h3>';
+    }
 
-  function parseJwt(token) {
-    const base64Url = token.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
-      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-    }).join(''));
-    return JSON.parse(jsonPayload);
-  }
-
-  window.onload = () => {
-    google.accounts.id.initialize({
-      client_id: CLIENT_ID,
-      callback: handleCredentialResponse
-    });
-    google.accounts.id.renderButton(
-      document.getElementById("g_id_signin"),
-      { theme: "outline", size: "large" }
-    );
-    google.accounts.id.prompt();
-  };
-
-  let ultimaActividad = Date.now();
-  const LIMITE_INACTIVIDAD = 5 * 60 * 1000;
-
-  function iniciarTemporizadorInactividad() {
-    ['mousemove', 'keydown', 'click'].forEach(evento => {
-      document.addEventListener(evento, () => ultimaActividad = Date.now());
-    });
-
-    setInterval(() => {
-      if (Date.now() - ultimaActividad > LIMITE_INACTIVIDAD) {
-        alert("Sesión cerrada por inactividad.");
-        window.location.reload();
-      }
-    }, 60000);
-  }
-</script>
-
-<div id="loginOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);display:flex;justify-content:center;align-items:center;z-index:1000">
-  <div style="background:#fff;padding:30px;border-radius:10px;text-align:center;box-shadow:0 0 15px rgba(0,0,0,0.3)">
-    <h2>Inicia sesión con Google</h2>
-    <div id="g_id_signin"></div>
-  </div>
-</div>
-
-<script>
-  renderTable();
-</script>
+    window.onload = () => {
+      google.accounts.id.initialize({
+        client_id: CLIENT_ID,
+        callback: handleCredentialResponse
+      });
+      google.accounts.id.renderButton(
+        document.getElementById("g_id_signin"),
+        { theme: "outline", size: "large" }
+      );
+      google.accounts.id.prompt();
+    };
+  </script>
+</body>
+</html>
