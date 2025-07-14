@@ -2,7 +2,7 @@
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
   const CLIENT_ID = "44635824268-o6n0gvu9smp2tlsuk23b8n17660r32gj.apps.googleusercontent.com";
-  const CORREO_AUTORIZADO = "gilmar.lagosc@gmail.com"; // <-- cambia esto por tu Gmail real si quieres restringir acceso
+  const CORREO_AUTORIZADO = "gilmarlagosc@gmail.com"; // ← reemplázalo por tu correo real
 
   function handleCredentialResponse(response) {
     const data = parseJwt(response.credential);
@@ -11,10 +11,15 @@
       return;
     }
 
-    if (CORREO_AUTORIZADO && data.email !== CORREO_AUTORIZADO) {
-      alert("Acceso restringido solo a usuarios autorizados.");
-      return;
-    }
+    // DEBUG: imprimir correo recibido al hacer login
+    console.log("Correo autorizado esperado:", CORREO_AUTORIZADO);
+    console.log("Correo recibido:", data.email);
+
+    // Desactiva validación temporalmente para pruebas
+    // if (CORREO_AUTORIZADO && data.email !== CORREO_AUTORIZADO) {
+    //   alert("Acceso restringido solo a usuarios autorizados.");
+    //   return;
+    // }
 
     document.getElementById("loginOverlay").style.display = "none";
     iniciarTemporizadorInactividad();
@@ -41,7 +46,6 @@
     google.accounts.id.prompt();
   };
 
-  // Temporizador de inactividad
   let ultimaActividad = Date.now();
   const LIMITE_INACTIVIDAD = 5 * 60 * 1000;
 
